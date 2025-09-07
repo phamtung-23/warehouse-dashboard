@@ -1,8 +1,17 @@
 import { Controller, Post, Body, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBody,
+  ApiBadRequestResponse,
+  ApiUnauthorizedResponse,
+} from '@nestjs/swagger';
 import { UserService } from '../user/user.service';
 import { LoginDto } from './dto/auth.dto';
 
+@ApiTags('auth')
 @Controller('auth')
 export class AuthController {
   constructor(
@@ -11,6 +20,14 @@ export class AuthController {
   ) {}
 
   @Post('login')
+  @ApiOperation({
+    summary: 'User login',
+    description: 'Authenticate user with employee code and password',
+  })
+  @ApiBody({ type: LoginDto })
+  @ApiResponse({ status: 200, description: 'Login successful' })
+  @ApiBadRequestResponse({ description: 'Invalid input data' })
+  @ApiUnauthorizedResponse({ description: 'Invalid credentials' })
   async login(@Body() loginDto: LoginDto) {
     const user = await this.userService.validateUser(
       loginDto.code,
