@@ -1,0 +1,10 @@
+- Sử dụng context7 để truy xuất các tài liệu liên quan nhất đến quá trình làm việc.
+- Tuân thủ các thực hành tốt đã được thiết lập (SOLID, DRY, KISS). Giữ trách nhiệm nhỏ và được định nghĩa rõ ràng.
+- Tổ chức mã thành các module/gói rõ ràng với trách nhiệm đơn nhất và ghép nối tối thiểu.
+- Sử dụng đặt tên có nghĩa và nhất quán cho tệp, hàm, biến và kiểu.
+- Viết các hàm nhỏ, tập trung và tránh lồng sâu; ưu tiên composition hơn các khối đơn khổng lồ.
+- Thêm chú thích rõ ràng, cô đọng giải thích lý do (không phải mô tả) khi ý định không rõ ràng; giữ tài liệu API công khai luôn cập nhật.
+- Ưu tiên mã dễ đọc hơn các mẹo tinh vi; tối ưu cho khả năng đọc trước, chỉ micro-tối ưu khi thực sự cần thiết.
+- Đo hiệu năng bằng profiling và thêm caching, batching, phân trang hoặc chỉ mục khi số liệu cho thấy điểm nghẽn.
+- Xử lý lỗi một cách rõ ràng, xác thực đầu vào và đảm bảo giải phóng tài nguyên (timeouts, hủy bỏ, bộ nhớ).
+- Xem xét các mẫu concurrency và async một cách an toàn: tránh trạng thái chia sẻ có thể thay đổi và dùng đồng bộ hóa thích hợp hoặc tính bất biến.

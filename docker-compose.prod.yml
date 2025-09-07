@@ -1,0 +1,172 @@
+services:
+  # Berry Material React Production
+  dashboard-react:
+    build:
+      context: ./dashboard
+      dockerfile: Dockerfile
+      target: production
+      args:
+        - NODE_ENV=production
+    container_name: dashboard-react-prod
+    ports:
+      - "${REACT_PROD_PORT:-3000}:3000"
+    environment:
+      - NODE_ENV=${NODE_ENV:-production}
+      - VITE_APP_API_URL=http://localhost:${BACKEND_PORT:-3001}
+    networks:
+      - berry-prod-network
+    depends_on:
+      - backend-api
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 512M
+        reservations:
+          cpus: '0.5'
+          memory: 256M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # NestJS Backend API Production
+  backend-api:
+    build:
+      context: ./backend-api
+      dockerfile: Dockerfile
+      target: production
+      args:
+        - NODE_ENV=production
+    container_name: backend-api-prod
+    ports:
+      - "${BACKEND_PORT:-3001}:3001"
+    environment:
+      - NODE_ENV=${NODE_ENV:-production}
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-berry_user}:${POSTGRES_PASSWORD:-berry_pass}@postgres-prod:5432/${POSTGRES_DB:-berry_db}
+      - REDIS_URL=redis://:${REDIS_PASSWORD:-berry_redis_pass}@redis-prod:6379
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-berry_redis_pass}
+      - JWT_SECRET=${JWT_SECRET:-your_jwt_secret_key_here}
+    networks:
+      - berry-prod-network
+    depends_on:
+      - postgres-prod
+      - redis-prod
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3001/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    networks:
+      - berry-prod-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  # Redis for production caching (optional)
+  redis-prod:
+    image: redis:7-alpine
+    container_name: berry-redis-prod
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-berry_redis_pass}
+    volumes:
+      - redis_prod_data:/data
+    networks:
+      - berry-prod-network
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+        reservations:
+          cpus: '0.25'
+          memory: 128M
+    healthcheck:
+      test: ["CMD", "redis-cli", "--pass", "${REDIS_PASSWORD:-berry_redis_pass}", "ping"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+
+  # PostgreSQL for production (optional)
+  postgres-prod:
+    image: postgres:16-alpine
+    container_name: berry-postgres-prod
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-berry_prod_db}
+      POSTGRES_USER: ${POSTGRES_USER:-berry_prod_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-berry_prod_pass}
+      POSTGRES_INITDB_ARGS: "--auth-host=scram-sha-256"
+    volumes:
+      - ${POSTGRES_DATA_PATH:-./postgres_data_prod}:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    networks:
+      - berry-prod-network
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-berry_prod_user} -d ${POSTGRES_DB:-berry_prod_db}"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Log aggregator (optional)
+  log-aggregator:
+    image: fluent/fluent-bit:latest
+    container_name: berry-fluent-bit
+    volumes:
+      - /var/log:/var/log:ro
+      - ./fluent-bit.conf:/fluent-bit/etc/fluent-bit.conf:ro
+    networks:
+      - berry-prod-network
+    restart: unless-stopped
+    depends_on:
+      - berry-react-prod
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 128M
+
+volumes:
+  redis_prod_data:
+    driver: local
+
+networks:
+  berry-prod-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16

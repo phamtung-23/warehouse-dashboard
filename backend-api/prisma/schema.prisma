@@ -1,0 +1,119 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Enum for language preference
+enum Language {
+  tieng_viet
+  english
+}
+
+// Stores table
+model Store {
+  id        Int       @id @default(autoincrement())
+  name      String    @unique @db.VarChar(255)
+  address   String?   @db.Text
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+
+  // Relations
+  users User[]
+
+  @@map("stores")
+  @@index([name])
+}
+
+// Permissions table
+model Permission {
+  id          Int       @id @default(autoincrement())
+  name        String    @unique @db.VarChar(255)
+  description String?   @db.Text
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  deletedAt   DateTime? @map("deleted_at")
+
+  // Relations
+  rolePermissions RolePermission[]
+
+  @@map("permissions")
+  @@index([name])
+}
+
+// Roles table
+model Role {
+  id          Int       @id @default(autoincrement())
+  name        String    @unique @db.VarChar(255)
+  description String?   @db.Text
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  deletedAt   DateTime? @map("deleted_at")
+
+  // Relations
+  rolePermissions RolePermission[]
+  userRoles       UserRole[]
+
+  @@map("roles")
+  @@index([name])
+}
+
+// Role permissions junction table
+model RolePermission {
+  roleId       Int       @map("role_id")
+  permissionId Int       @map("permission_id")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+  deletedAt    DateTime? @map("deleted_at")
+
+  // Relations
+  role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permissionId])
+  @@map("role_permissions")
+}
+
+// Users table
+model User {
+  id           Int       @id @default(autoincrement())
+  name         String    @db.VarChar(255)
+  code         String    @unique @db.VarChar(50)
+  passwordHash String    @map("password_hash") @db.VarChar(255)
+  storeId      Int?      @map("store_id")
+  language     Language  @default(tieng_viet)
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+  deletedAt    DateTime? @map("deleted_at")
+
+  // Relations
+  store     Store?     @relation(fields: [storeId], references: [id], onDelete: SetNull)
+  userRoles UserRole[]
+
+  @@map("users")
+  @@index([code], name: "idx_users_code")
+}
+
+// User roles junction table
+model UserRole {
+  userId    Int       @map("user_id")
+  roleId    Int       @map("role_id")
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@id([userId, roleId])
+  @@map("user_roles")
+  @@index([userId], name: "idx_user_roles_user_id")
+}
