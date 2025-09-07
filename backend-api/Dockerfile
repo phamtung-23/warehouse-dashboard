@@ -17,6 +17,9 @@ RUN yarn install --frozen-lockfile
 # Copy source code
 COPY . ./
 
+# Generate Prisma client
+RUN npx prisma generate
+
 # Build the application
 RUN yarn build
 
@@ -34,6 +37,9 @@ RUN yarn install
 
 # Copy source code
 COPY . ./
+
+# Generate Prisma client for the current platform
+RUN npx prisma generate
 
 # Expose port
 EXPOSE 3001
@@ -59,6 +65,12 @@ COPY package.json yarn.lock ./
 
 # Install only production dependencies
 RUN yarn install --frozen-lockfile --production && yarn cache clean
+
+# Copy prisma schema for client generation
+COPY prisma ./prisma
+
+# Generate Prisma client for production
+RUN npx prisma generate
 
 # Copy built application from builder stage
 COPY --from=builder --chown=nestjs:nodejs /app/dist ./dist
